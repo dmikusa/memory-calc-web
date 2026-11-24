@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JVM Memory Calculator</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>JVM Memory Calculator</h1>
+        <p class="subtitle">Simulate the Paketo memory calculator. Every input is supplied below; class counting reads only the folder or JAR you choose.</p>
+      </div>
+    </div>
+    <span class="badge">local simulation</span>
+  </header>
+
+  <main class="layout">
+    <section class="panel inputs" aria-label="Calculator inputs">
+      <div class="panel-group">
+        <h2>Container</h2>
+
+        <div class="field">
+          <label for="memoryLimit">Memory limit</label>
+          <div class="input-row">
+            <input id="memoryLimit" class="mono" type="text" value="1G" autocomplete="off" spellcheck="false" aria-describedby="memoryHint">
+            <div class="presets" aria-label="Memory presets">
+              <button type="button" data-memory="256M">256M</button>
+              <button type="button" data-memory="512M">512M</button>
+              <button type="button" data-memory="1G">1G</button>
+              <button type="button" data-memory="2G">2G</button>
+              <button type="button" data-memory="4G">4G</button>
+            </div>
+          </div>
+          <p id="memoryHint" class="hint">Total memory available to the JVM. Leave blank to use the buildpack default of 1G.</p>
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label for="headroom">Head room</label>
+            <output id="headroomOut" for="headroom">0%</output>
+          </div>
+          <input id="headroom" type="range" min="0" max="25" step="1" value="0">
+          <p class="hint">Percentage of total memory reserved outside the heap.</p>
+        </div>
+      </div>
+
+      <div class="panel-group">
+        <h2>JVM sizing</h2>
+
+        <div class="field">
+          <label for="threadCount">Thread count</label>
+          <input id="threadCount" class="mono" type="number" min="0" step="1" placeholder="250 (default)">
+          <p class="hint">Leave blank to use the buildpack default of 250.</p>
+        </div>
+
+        <div class="field">
+          <span class="field-label">Class counts</span>
+          <div class="segmented" role="radiogroup" aria-label="Class count source">
+            <label><input type="radio" name="classMode" value="app" checked><span>Count from app</span></label>
+            <label><input type="radio" name="classMode" value="manual"><span>Manual entry</span></label>
+          </div>
+        </div>
+
+        <div id="classAppPanel" class="mode-panel">
+          <div class="field">
+            <label for="classPath">App folder or JAR</label>
+            <input id="classPath" class="mono" type="text" placeholder="/path/to/app or app.jar" autocomplete="off" spellcheck="false">
+            <div class="picker-actions">
+              <button type="button" id="pickFolder">Choose folder…</button>
+              <button type="button" id="pickJar">Choose JAR…</button>
+              <button type="button" id="countClasses">Count</button>
+            </div>
+            <p id="classPathStatus" class="hint">Uses the buildpack's class counting against a local folder or JAR, then fills App classes. It returns one total for the app, not a per-type breakdown.</p>
+          </div>
+        </div>
+
+        <div id="classManualPanel" class="mode-panel" hidden>
+          <div class="field">
+            <span class="field-label">Manual entry</span>
+            <div class="segmented" role="radiogroup" aria-label="Manual class count style">
+              <label><input type="radio" name="manualClassMode" value="total" checked><span>Total</span></label>
+              <label><input type="radio" name="manualClassMode" value="breakdown"><span>Breakdown by type</span></label>
+            </div>
+          </div>
+
+          <div id="manualTotalPanel" class="field">
+            <label for="loadedClasses">Loaded class count (used as-is)</label>
+            <input id="loadedClasses" class="mono" type="number" min="0" step="1" placeholder="e.g. 2800">
+            <p class="hint">Used as-is for metaspace sizing. This is the final loaded count; the 0.35 factor is not applied.</p>
+          </div>
+        </div>
+
+        <details class="advanced" id="classDetails">
+          <summary id="classDetailsSummary">JVM and agent class counts</summary>
+          <div class="field-grid">
+            <div class="field">
+              <label for="jvmClasses">JVM classes</label>
+              <input id="jvmClasses" class="mono" type="number" min="0" value="8000">
+            </div>
+            <div class="field">
+              <label for="appClasses">App classes</label>
+              <input id="appClasses" class="mono" type="number" min="0" value="0">
+            </div>
+            <div class="field">
+              <label for="agentClasses">Agent classes</label>
+              <input id="agentClasses" class="mono" type="number" min="0" value="0">
+            </div>
+            <div class="field">
+              <label for="adjustment">Adjustment</label>
+              <input id="adjustment" class="mono" type="text" placeholder="100%" autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+          <p class="hint" id="classDetailsHint">App classes comes from the count above. These values are combined, then multiplied by 0.35.</p>
+          <p id="formula" class="formula"></p>
+        </details>
+
+        <label class="check">
+          <input id="lowProfile" type="checkbox">
+          <span>Low memory profile</span>
+        </label>
+        <p class="hint">Scales stack, code cache, and threads for containers under 1G. Production only enables this when <code>BPL_LOW_MEMORY_PROFILE_DISABLED=false</code>.</p>
+      </div>
+
+      <div class="panel-group">
+        <h2>Overrides</h2>
+
+        <div class="field">
+          <label for="javaToolOptions">JAVA_TOOL_OPTIONS</label>
+          <textarea id="javaToolOptions" class="mono" rows="3" placeholder="-Xss1M" spellcheck="false"></textarea>
+          <p class="hint">Recognized: <code>-Xmx</code>, <code>-Xss</code>, <code>-XX:MaxMetaspaceSize</code>, <code>-XX:ReservedCodeCacheSize</code>, <code>-XX:MaxDirectMemorySize</code>. User-set values are preserved and omitted from generated options.</p>
+        </div>
+
+        <div class="field">
+          <label for="jvmVersion">JVM version</label>
+          <input id="jvmVersion" class="mono" type="text" placeholder="e.g. 21 or 25" autocomplete="off" spellcheck="false">
+          <p class="hint">Only used to decide whether Java 25+ compact object headers are added when low profile is on.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel results" aria-label="Calculation results">
+      <div class="results-head">
+        <h2>Result</h2>
+        <span id="status" class="status" aria-live="polite">Live</span>
+      </div>
+
+      <div id="error" class="error" role="alert" hidden></div>
+
+      <div class="summary">
+        <div class="stat">
+          <span class="stat-label">Total</span>
+          <span id="statTotal" class="stat-value">—</span>
+          <span id="statTotalSub" class="stat-sub">&nbsp;</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Heap</span>
+          <span id="statHeap" class="stat-value">—</span>
+          <span id="statHeapSub" class="stat-sub">&nbsp;</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Non-heap</span>
+          <span id="statNonHeap" class="stat-value">—</span>
+          <span id="statNonHeapSub" class="stat-sub">&nbsp;</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Threads</span>
+          <span id="statThreads" class="stat-value">—</span>
+          <span id="statThreadsSub" class="stat-sub">&nbsp;</span>
+        </div>
+      </div>
+
+      <div id="resolved" class="resolved"></div>
+
+      <div class="bar-wrap">
+        <div id="bar" class="bar" role="img" aria-label="Stacked view of JVM memory regions"></div>
+      </div>
+      <div id="legend" class="legend"></div>
+
+      <div id="notes" class="notes"></div>
+
+      <div class="table-wrap">
+        <table class="regions">
+          <thead>
+            <tr>
+              <th>Region</th>
+              <th class="num">Size</th>
+              <th class="num">Share</th>
+              <th>JVM option</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody id="regionRows"></tbody>
+        </table>
+      </div>
+
+      <div class="options">
+        <div class="options-head">
+          <h2>Generated JAVA_TOOL_OPTIONS</h2>
+          <button id="copyOptions" class="copy" type="button">Copy</button>
+        </div>
+        <pre id="optionsOut" class="options-out mono">—</pre>
+      </div>
+    </section>
+  </main>
+
+  <div id="infoPopover" class="info-popover" role="tooltip" hidden></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
