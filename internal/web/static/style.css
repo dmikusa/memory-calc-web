@@ -221,17 +221,6 @@ h1 {
   padding: 6px 20px 20px;
 }
 
-@media (min-width: 1041px) {
-  .inputs {
-    position: sticky;
-    top: 24px;
-    max-height: calc(100vh - 48px);
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
-}
-
 .panel-group {
   padding: 18px 0;
   border-bottom: 1px solid var(--border-soft);
