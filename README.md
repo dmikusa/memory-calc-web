@@ -31,20 +31,46 @@ go get github.com/paketo-buildpacks/jvm-vendors@latest
 
 ## Run
 
+### Without a clone
+
+Install the binary:
+
 ```bash
+go install github.com/dmikusa/memory-calc-web@latest
+memory-calc-web
+```
+
+Or run it directly:
+
+```bash
+go run github.com/dmikusa/memory-calc-web@latest
+```
+
+Both fetch the latest version from the Go module proxy and start the server on
+`http://127.0.0.1:8080`. `go install` places the binary in `$(go env GOPATH)/bin`
+(or `$GOBIN` if set), so make sure that directory is on your `PATH`.
+
+### From a clone
+
+```bash
+git clone https://github.com/dmikusa/memory-calc-web.git
+cd memory-calc-web
 go run .
 ```
 
-This starts the server on `http://127.0.0.1:8080` and opens your browser.
+### Options
 
-Options:
+Flags work with either approach:
 
 ```bash
-go run . -listen 127.0.0.1:9000   # different address/port
-go run . -no-open                 # don't launch a browser
+memory-calc-web -listen 127.0.0.1:9000   # different address/port
+memory-calc-web -no-open                 # don't launch a browser
+
+go run github.com/dmikusa/memory-calc-web@latest -listen 127.0.0.1:9000
+go run . -no-open
 ```
 
-Build a binary:
+Build a binary from a clone:
 
 ```bash
 go build -o memory-calc-web .
