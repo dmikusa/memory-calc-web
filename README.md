@@ -18,13 +18,16 @@ the buildpack's calculator.
 ## Requirements
 
 - Go 1.27 or newer
-- A local checkout of [paketo-buildpacks/jvm-vendors](https://github.com/paketo-buildpacks/jvm-vendors)
 
-`go.mod` uses a `replace` directive pointing at `../../paketo-buildpacks/jvm-vendors`
-(relative to this directory). Update that path if your checkout lives elsewhere.
+The calculator and class counting come from the released
+[`github.com/paketo-buildpacks/jvm-vendors`](https://github.com/paketo-buildpacks/jvm-vendors)
+module, currently `v0.3.10`. No local checkout is needed.
 
-Using the local checkout rather than a released version means the app stays in
-sync with whatever calculator code you are working on.
+To pick up a newer release:
+
+```bash
+go get github.com/paketo-buildpacks/jvm-vendors@latest
+```
 
 ## Run
 
